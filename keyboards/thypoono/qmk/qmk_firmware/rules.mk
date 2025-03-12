@@ -1,0 +1,1 @@
+SERIAL_DRIVER = vendor      # Use RP2040 vendor-specific driver
