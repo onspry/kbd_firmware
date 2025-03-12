@@ -1,31 +1,49 @@
 # QMK/Vial Firmware Makefile
 
 # Variables - customize these for your keyboard/keymap
-KEYBOARD ?= thypoono
-KEYMAP ?= vial
+KEYBOARD ?= onspry/thypoono/rev1
+KEYMAP ?= default
 QMK_DIR ?= ./qmk/qmk_firmware
 VIAL_DIR ?= ./vial/vial-qmk
 
 # Phony targets
-.PHONY: all qmk vial clean flash flash-vial list debug lint vial-json help git-submodule
+.PHONY: all qmk vial clean flash flash-vial list debug lint vial-json help git-submodule init-qmk init-vial setup
 
 # Default target
 all: qmk
 
+# First time setup and git submodule initialization
+setup: git-submodule
+	@echo "First time setup completed. You can now use other make commands."
+
+# Initialize QMK directory with keyboard files
+init-qmk:
+	@echo "Initializing QMK directory with keyboard files..."
+	@rm -rf $(QMK_DIR)/keyboards/onspry
+	@mkdir -p $(QMK_DIR)/keyboards/onspry/thypoono
+	@cp thypoono/qmk/qmk_firmware/readme.md $(QMK_DIR)/keyboards/onspry/thypoono/
+	@cp -r thypoono/qmk/qmk_firmware/rev1 $(QMK_DIR)/keyboards/onspry/thypoono/
+	@cp -r thypoono/qmk/qmk_firmware/keymaps $(QMK_DIR)/keyboards/onspry/thypoono/
+	@find $(QMK_DIR)/keyboards/onspry -name ".DS_Store" -delete
+
+# Initialize Vial directory with keyboard files
+init-vial:
+	@echo "Initializing Vial directory with keyboard files..."
+	@rm -rf $(VIAL_DIR)/keyboards/onspry
+	@mkdir -p $(VIAL_DIR)/keyboards/onspry/thypoono
+	@cp thypoono/qmk/qmk_firmware/readme.md $(VIAL_DIR)/keyboards/onspry/thypoono/
+	@cp -r thypoono/qmk/qmk_firmware/rev1 $(VIAL_DIR)/keyboards/onspry/thypoono/
+	@cp -r thypoono/qmk/qmk_firmware/keymaps $(VIAL_DIR)/keyboards/onspry/thypoono/
+	@find $(VIAL_DIR)/keyboards/onspry -name ".DS_Store" -delete
+
 # Build standard QMK firmware
-qmk: git-submodule
+qmk: init-qmk
 	@echo "Building QMK firmware for $(KEYBOARD) with keymap $(KEYMAP)..."
-	@rm -rf $(QMK_DIR)/keyboards/$(KEYBOARD)
-	@mkdir -p $(QMK_DIR)/keyboards/$(KEYBOARD)
-	@cp -r keyboards/$(KEYBOARD)/qmk/* $(QMK_DIR)/keyboards/$(KEYBOARD)/
 	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP)
 
 # Build Vial-enabled firmware
-vial: git-submodule
+vial: init-vial
 	@echo "Building Vial-enabled firmware for $(KEYBOARD) with keymap $(KEYMAP)..."
-	@rm -rf $(VIAL_DIR)/keyboards/$(KEYBOARD)
-	@mkdir -p $(VIAL_DIR)/keyboards/$(KEYBOARD)
-	@cp -r keyboards/$(KEYBOARD)/qmk/* $(VIAL_DIR)/keyboards/$(KEYBOARD)/
 	$(MAKE) -C $(VIAL_DIR) $(KEYBOARD):$(KEYMAP)
 
 # Clean the build files
@@ -63,12 +81,9 @@ vial-json:
 	# Add your JSON compilation commands here, if needed
 
 # Run lint/code checks
-lint:
+lint: init-qmk
 	@echo "Running QMK lint checks for keyboard $(KEYBOARD)..."
-	@rm -rf $(QMK_DIR)/keyboards/$(KEYBOARD)
-	@mkdir -p $(QMK_DIR)/keyboards/$(KEYBOARD)
-	@cp -r keyboards/$(KEYBOARD)/qmk/qmk_firmware/* $(QMK_DIR)/keyboards/$(KEYBOARD)/
-	QMK_HOME=$(QMK_DIR) cd $(QMK_DIR) && qmk lint -kb $(KEYBOARD)
+	QMK_HOME=$(QMK_DIR) cd $(QMK_DIR) && qmk lint -kb onspry/thypoono/rev1
 
 # Help message
 help:
@@ -98,12 +113,9 @@ help:
 	@echo "  make KEYBOARD=planck/rev6 KEYMAP=default vial"
 	@echo "  make KEYBOARD=dz60 KEYMAP=custom flash-vial"
 
-# Ensure submodules are initialized before building
-build: git-submodule
-	@echo "Building firmware..."
-	@QMK_HOME=$(QMK_PATH) qmk compile -kb $(KEYBOARD) -km $(KEYMAP)
-
+# Update git submodules (only needed for setup or explicit updates)
 git-submodule:
+	@echo "Updating git submodules..."
 	git submodule update --remote
 	git submodule update --init --recursive --depth 1
 	cd qmk/qmk_firmware && git submodule update --init --recursive --depth 1
