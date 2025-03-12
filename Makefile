@@ -5,12 +5,13 @@ KEYBOARD ?= onspry/thypoono/rev1
 KEYMAP ?= default
 QMK_DIR ?= ./qmk/qmk_firmware
 VIAL_DIR ?= ./vial/vial-qmk
+BUILD_DIR ?= ./build
 
 # Phony targets
-.PHONY: all qmk vial clean flash flash-vial list debug lint vial-json help git-submodule init-qmk init-vial setup
+.PHONY: all qmk vial clean flash flash-vial list debug lint vial-json help git-submodule init-qmk init-vial setup qmk-left qmk-right
 
 # Default target
-all: qmk
+all: qmk-left qmk-right
 
 # First time setup and git submodule initialization
 setup: git-submodule
@@ -36,10 +37,22 @@ init-vial:
 	@cp -r thypoono/qmk/qmk_firmware/keymaps $(VIAL_DIR)/keyboards/onspry/thypoono/
 	@find $(VIAL_DIR)/keyboards/onspry -name ".DS_Store" -delete
 
-# Build standard QMK firmware
-qmk: init-qmk
-	@echo "Building QMK firmware for $(KEYBOARD) with keymap $(KEYMAP)..."
-	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP)
+# Build standard QMK firmware - Left version
+qmk-left: init-qmk
+	@echo "Building QMK firmware for $(KEYBOARD) with keymap $(KEYMAP) - LEFT version..."
+	@mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP) MASTER_LEFT=true
+	@cp $(QMK_DIR)/.build/onspry_thypoono_rev1_default.uf2 $(BUILD_DIR)/onspry_thypoono_rev1_default_left.uf2
+
+# Build standard QMK firmware - Right version
+qmk-right: init-qmk
+	@echo "Building QMK firmware for $(KEYBOARD) with keymap $(KEYMAP) - RIGHT version..."
+	@mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP) MASTER_LEFT=false
+	@cp $(QMK_DIR)/.build/onspry_thypoono_rev1_default.uf2 $(BUILD_DIR)/onspry_thypoono_rev1_default_right.uf2
+
+# Legacy qmk target (builds both versions)
+qmk: qmk-left qmk-right
 
 # Build Vial-enabled firmware
 vial: init-vial
@@ -52,6 +65,8 @@ clean:
 	$(MAKE) -C $(QMK_DIR) clean
 	@echo "Cleaning Vial build files..."
 	$(MAKE) -C $(VIAL_DIR) clean
+	@echo "Cleaning local build directory..."
+	@rm -rf $(BUILD_DIR)/*
 
 # Flash standard QMK firmware
 flash:
@@ -90,8 +105,10 @@ help:
 	@echo "QMK/Vial Firmware Build System"
 	@echo "============================="
 	@echo "Available targets:"
-	@echo "  all        - Default target, runs 'qmk'"
-	@echo "  qmk        - Build standard QMK firmware"
+	@echo "  all        - Build both left and right QMK firmware versions"
+	@echo "  qmk-left   - Build QMK firmware for left half"
+	@echo "  qmk-right  - Build QMK firmware for right half"
+	@echo "  qmk        - Same as 'all', builds both versions"
 	@echo "  vial       - Build Vial-enabled firmware"
 	@echo "  clean      - Clean all build files"
 	@echo "  flash      - Flash standard QMK firmware"
@@ -110,8 +127,9 @@ help:
 	@echo "  BOOTLOADER = $(BOOTLOADER)"
 	@echo ""
 	@echo "Example usage:"
-	@echo "  make KEYBOARD=planck/rev6 KEYMAP=default vial"
-	@echo "  make KEYBOARD=dz60 KEYMAP=custom flash-vial"
+	@echo "  make all                     # Build both left and right versions"
+	@echo "  make qmk-left               # Build only left version"
+	@echo "  make qmk-right              # Build only right version"
 
 # Update git submodules (only needed for setup or explicit updates)
 git-submodule:

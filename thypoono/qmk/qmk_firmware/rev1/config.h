@@ -26,15 +26,14 @@
 #define SERIAL_USART_FULL_DUPLEX
 #undef SERIAL_DRIVER_VENDOR  // Explicitly disable PIO
 
-// -------------------- CORE FEATURE: DYNAMIC PIN ASSIGNMENT --------------------
 // Left half (master) uses pins 4/5
-#define SERIAL_USART_TX_PIN GP4
-#define SERIAL_USART_RX_PIN GP5
-
-// // Right half uses different pins 24/25
-// #define SERIAL_USART_TX_PIN_RIGHT GP24
-// #define SERIAL_USART_RX_PIN_RIGHT GP25
-// ---------------------------------------------------------------------------
+#ifdef MASTER_LEFT
+    #define SERIAL_USART_TX_PIN GP4
+    #define SERIAL_USART_RX_PIN GP5
+#else
+    #define SERIAL_USART_TX_PIN GP24
+    #define SERIAL_USART_RX_PIN GP25
+#endif
 
 // UART configuration - let QMK handle this
 #define SERIAL_USART_SPEED 115200  // Lower baud rate for reliability
