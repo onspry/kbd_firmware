@@ -22,7 +22,7 @@
 #define SPLIT_HAND_PIN_HIGH_IS_LEFT  // Switch to high = left
 
 // QMK handle the UART initialization
-#define SERIAL_DRIVER SERIAL_DRIVER_UART
+#define SERIAL_DRIVER SERIAL_DRIVER_USART
 #define SERIAL_USART_FULL_DUPLEX
 #undef SERIAL_DRIVER_VENDOR  // Explicitly disable PIO
 
