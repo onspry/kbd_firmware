@@ -1,7 +1,7 @@
 {
-  "manufacturer": "Paul Ropel",
+  "manufacturer": "onspry",
   "keyboard_name": "thypoono",
-  "maintainer": "Paul Ropel",
+  "maintainer": "onspry",
   "build": {
     "lto": true
   },
@@ -34,7 +34,7 @@
   "url": "https://github.com/onspry/kbd_firmware",
   "usb": {
     "device_version": "1.0.0",
-    "pid": "0x0000",
+    "pid": "0x0001",
     "vid": "0xFEED"
   },
   "layouts": {

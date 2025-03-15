@@ -9,10 +9,14 @@ BUILD_DIR ?= ./.build
 PR_DIR ?= ./pr_submission
 
 # Phony targets
-.PHONY: all qmk vial clean flash flash-vial list debug lint vial-json help git-submodule init-qmk init-vial setup qmk-left qmk-right prepare-pr
+.PHONY: all qmk vial clean flash flash-vial list debug lint help git-submodule init-qmk init-vial setup qmk-left qmk-right vial-left vial-right prepare-pr
 
 # Default target
-all: init-qmk qmk-left qmk-right
+all: qmk vial # Build both left and right QMK firmware versions
+
+# Build firmware versions
+qmk: qmk-left qmk-right  # Initialize QMK and build both left and right versions
+vial: vial-left vial-right  # Initialize Vial and build both left and right versions
 
 # First time setup and git submodule initialization
 setup: git-submodule
@@ -26,21 +30,22 @@ init-qmk:
 	@cp -r thypoono/qmk/qmk_firmware/ $(QMK_DIR)/keyboards/onspry_tmp/thypoono/
 	@find $(QMK_DIR)/keyboards/onspry_tmp -name ".DS_Store" -delete
 	@echo "Cleaning local build directory..."
-	@rm -rf $(BUILD_DIR)/*
+	@rm -rf $(BUILD_DIR)/qmk_firmware*
 	@mkdir -p $(BUILD_DIR)/qmk_firmware
 
 # Initialize Vial directory with keyboard files
 init-vial:
 	@echo "Initializing Vial directory with keyboard files..."
-	@rm -rf $(VIAL_DIR)/keyboards/onspry
-	@mkdir -p $(VIAL_DIR)/keyboards/onspry/thypoono
-	@cp thypoono/qmk/qmk_firmware/readme.md $(VIAL_DIR)/keyboards/onspry/thypoono/
-	@cp -r thypoono/qmk/qmk_firmware/rev1 $(VIAL_DIR)/keyboards/onspry/thypoono/
-	@cp -r thypoono/qmk/qmk_firmware/keymaps $(VIAL_DIR)/keyboards/onspry/thypoono/
-	@find $(VIAL_DIR)/keyboards/onspry -name ".DS_Store" -delete
+	@rm -rf $(VIAL_DIR)/keyboards/onspry_tmp
+	@mkdir -p $(VIAL_DIR)/keyboards/onspry_tmp/thypoono
+	@cp -r thypoono/qmk/qmk_firmware/ $(VIAL_DIR)/keyboards/onspry_tmp/thypoono/
+	@cp -r thypoono/vial/vial-qmk/keymaps $(VIAL_DIR)/keyboards/onspry_tmp/thypoono/
+	@find $(VIAL_DIR)/keyboards/onspry_tmp -name ".DS_Store" -delete
+	@rm -rf $(BUILD_DIR)/vial_firmware
+	@mkdir -p $(BUILD_DIR)/vial_firmware
 
 # Define a function to build firmware with parameters
-define build_firmware
+define build_qmk_firmware
 	@echo "Building QMK firmware for $(KEYBOARD) with keymap $(KEYMAP) - $(1) version..."
 	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP) MASTER_LEFT=$(2)
 	@for file in $(QMK_DIR)/.build/onspry_tmp*; do \
@@ -53,22 +58,46 @@ define build_firmware
 	@cp $(QMK_DIR)/.build/*_$(1).* $(BUILD_DIR)/qmk_firmware
 endef
 
+# Define a function to build Vial firmware with parameters
+define build_vial_firmware
+	@echo "Building Vial firmware for $(KEYBOARD) with keymap $(KEYMAP) - $(1) version..."
+	$(MAKE) -C $(VIAL_DIR) $(KEYBOARD):$(KEYMAP) MASTER_LEFT=$(2)
+	@for file in $(VIAL_DIR)/.build/onspry_tmp*; do \
+		if [ -f "$$file" ]; then \
+			target="$${file%.*}"; \
+			target="$${target//_tmp/}"; \
+			mv "$$file" "$${target}_$(1).$${file##*.}"; \
+		fi \
+	done
+	@cp $(VIAL_DIR)/.build/*_$(1).* $(BUILD_DIR)/vial_firmware
+endef
+
 # Build standard QMK firmware - Left version
-qmk-left:
+qmk-left: init-qmk
 	@echo "Cleaning before left build..."
 	$(MAKE) clean
-	$(call build_firmware,left,true)
+	$(call build_qmk_firmware,left,true)
 
 # Build standard QMK firmware - Right version
-qmk-right:
+qmk-right: init-qmk
 	@echo "Cleaning before right build..."
 	$(MAKE) clean
-	$(call build_firmware,right,false)
+	$(call build_qmk_firmware,right,false)
 
-# Build Vial-enabled firmware
-vial: init-vial
-	@echo "Building Vial-enabled firmware for $(KEYBOARD) with keymap $(KEYMAP)..."
-	$(MAKE) -C $(VIAL_DIR) $(KEYBOARD):$(KEYMAP)
+# Build Vial-enabled firmware - Left version
+vial-left: init-vial
+	@echo "Cleaning before left Vial build..."
+	$(MAKE) clean
+	$(call build_vial_firmware,left,true)
+
+# Build Vial-enabled firmware - Right version
+vial-right: init-vial
+	@echo "Cleaning before right Vial build..."
+	$(MAKE) clean
+	$(call build_vial_firmware,right,false)
+
+# Build both Vial versions
+vial: vial-left vial-right
 
 # Clean the build files
 clean:
@@ -99,15 +128,10 @@ debug:
 	@echo "Building QMK firmware with debug enabled..."
 	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP):debug
 
-# Compile Vial JSON definition (if applicable)
-vial-json:
-	@echo "Compiling Vial JSON definition..."
-	# Add your JSON compilation commands here, if needed
-
 # Run lint/code checks
 lint: init-qmk
 	@echo "Running QMK lint checks for keyboard $(KEYBOARD)..."
-	QMK_HOME=$(QMK_DIR) cd $(QMK_DIR) && qmk lint -kb onspry/thypoono/rev1
+	QMK_HOME=$(QMK_DIR) cd $(QMK_DIR) && qmk lint -kb $(KEYBOARD)
 
 # Help message
 help:
@@ -115,30 +139,36 @@ help:
 	@echo "============================="
 	@echo "Available targets:"
 	@echo "  all        - Build both left and right QMK firmware versions"
-	@echo "  qmk-left   - Build QMK firmware for left half"
-	@echo "  qmk-right  - Build QMK firmware for right half"
-	@echo "  qmk        - Same as 'all', builds both versions"
-	@echo "  vial       - Build Vial-enabled firmware"
-	@echo "  clean      - Clean all build files"
+	@echo "  qmk        - Build both left and right QMK firmware versions (same as 'all')"
+	@echo "  qmk-left   - Build QMK firmware for left half only"
+	@echo "  qmk-right  - Build QMK firmware for right half only"
+	@echo "  vial       - Build both left and right Vial-enabled firmware versions"
+	@echo "  vial-left  - Build Vial-enabled firmware for left half only"
+	@echo "  vial-right - Build Vial-enabled firmware for right half only"
+	@echo "  clean      - Clean all build files (QMK and Vial)"
 	@echo "  flash      - Flash standard QMK firmware"
 	@echo "  flash-vial - Flash Vial-enabled firmware"
-	@echo "  list       - List all available keyboards"
-	@echo "  debug      - Build with debugging enabled"
+	@echo "  list       - List all available keyboards in QMK and Vial"
+	@echo "  debug      - Build QMK firmware with debugging enabled"
 	@echo "  vial-json  - Compile Vial JSON definition (if needed)"
-	@echo "  lint       - Run code quality checks"
+	@echo "  lint       - Run QMK code quality checks"
+	@echo "  setup      - First-time setup and git submodule initialization"
 	@echo "  help       - Show this help message"
 	@echo ""
 	@echo "Variables (can be overridden):"
-	@echo "  KEYBOARD   = $(KEYBOARD)"
-	@echo "  KEYMAP     = $(KEYMAP)"
-	@echo "  QMK_DIR    = $(QMK_DIR)"
-	@echo "  VIAL_DIR   = $(VIAL_DIR)"
-	@echo "  BOOTLOADER = $(BOOTLOADER)"
+	@echo "  KEYBOARD   = $(KEYBOARD)   # Keyboard target"
+	@echo "  KEYMAP     = $(KEYMAP)     # Keymap to build"
+	@echo "  QMK_DIR    = $(QMK_DIR)    # QMK firmware directory"
+	@echo "  VIAL_DIR   = $(VIAL_DIR)   # Vial firmware directory"
+	@echo "  BUILD_DIR  = $(BUILD_DIR)  # Output directory for built firmware"
 	@echo ""
 	@echo "Example usage:"
-	@echo "  make all                     # Build both left and right versions"
-	@echo "  make qmk-left               # Build only left version"
-	@echo "  make qmk-right              # Build only right version"
+	@echo "  make all                   # Build both left and right QMK versions"
+	@echo "  make qmk-left              # Build only left QMK version"
+	@echo "  make qmk-right             # Build only right QMK version"
+	@echo "  make vial                  # Build both left and right Vial versions"
+	@echo "  make vial-left             # Build only left Vial version"
+	@echo "  make vial-right            # Build only right Vial version"
 
 # Update git submodules (only needed for setup or explicit updates)
 git-submodule:
