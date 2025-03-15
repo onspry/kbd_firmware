@@ -48,28 +48,30 @@ init-vial:
 define build_qmk_firmware
 	@echo "Building QMK firmware for $(KEYBOARD) with keymap $(KEYMAP) - $(1) version..."
 	$(MAKE) -C $(QMK_DIR) $(KEYBOARD):$(KEYMAP) MASTER_LEFT=$(2)
-	@for file in $(QMK_DIR)/.build/onspry_tmp*; do \
+	@for file in $(QMK_DIR)/.build/onspry_tmp*.uf2; do \
 		if [ -f "$$file" ]; then \
 			target="$${file%.*}"; \
 			target="$${target//_tmp/}"; \
-			mv "$$file" "$${target}_$(1).$${file##*.}"; \
+			mv "$$file" "$${target}_$(1).uf2"; \
 		fi \
 	done
-	@cp $(QMK_DIR)/.build/*_$(1).* $(BUILD_DIR)/qmk_firmware
+	@mkdir -p $(BUILD_DIR)/qmk_firmware
+	@cp $(QMK_DIR)/.build/*_$(1).uf2 $(BUILD_DIR)/qmk_firmware 2>/dev/null || echo "No .uf2 files found"
 endef
 
 # Define a function to build Vial firmware with parameters
 define build_vial_firmware
-	@echo "Building Vial firmware for $(KEYBOARD) with keymap $(KEYMAP) - $(1) version..."
-	$(MAKE) -C $(VIAL_DIR) $(KEYBOARD):$(KEYMAP) MASTER_LEFT=$(2)
-	@for file in $(VIAL_DIR)/.build/onspry_tmp*; do \
+	@echo "Building Vial firmware for $(KEYBOARD) with keymap vial - $(1) version..."
+	$(MAKE) -C $(VIAL_DIR) $(KEYBOARD):vial MASTER_LEFT=$(2)
+	@for file in $(VIAL_DIR)/.build/onspry_tmp*.uf2; do \
 		if [ -f "$$file" ]; then \
 			target="$${file%.*}"; \
 			target="$${target//_tmp/}"; \
-			mv "$$file" "$${target}_$(1).$${file##*.}"; \
+			mv "$$file" "$${target}_$(1).uf2"; \
 		fi \
 	done
-	@cp $(VIAL_DIR)/.build/*_$(1).* $(BUILD_DIR)/vial_firmware
+	@mkdir -p $(BUILD_DIR)/vial_firmware
+	@cp $(VIAL_DIR)/.build/*_$(1).uf2 $(BUILD_DIR)/vial_firmware 2>/dev/null || echo "No .uf2 files found"
 endef
 
 # Build standard QMK firmware - Left version
@@ -189,7 +191,7 @@ prepare-pr:
 	@cp -r thypoono/qmk/qmk_firmware/keymaps $(PR_DIR)/keyboards/onspry/thypoono/
 	
 	# Create required files
-	@echo "# Thypoono\n\nA split ergonomic keyboard with 42 keys.\n\n* Keyboard Maintainer: [onspry](https://github.com/onspry)\n* Hardware Supported: RP2040\n* Hardware Availability: [GitHub](https://github.com/onspry/thypoono)\n\nMake example for this keyboard (after setting up your build environment):\n\n    make onspry/thypoono/rev1:default\n\nFlashing example for this keyboard:\n\n    make onspry/thypoono/rev1:default:flash\n\nSee the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/newbs)." > $(PR_DIR)/keyboards/onspry/thypoono/readme.md
+	@echo "# Thypoono\n\nA split ergonomic keyboard with 43 keys.\n\n* Keyboard Maintainer: [onspry](https://github.com/onspry)\n* Hardware Supported: RP2040\n* Hardware Availability: [GitHub](https://github.com/onspry/thypoono)\n\nMake example for this keyboard (after setting up your build environment):\n\n    make onspry/thypoono/rev1:default\n\nFlashing example for this keyboard:\n\n    make onspry/thypoono/rev1:default:flash\n\nSee the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/newbs)." > $(PR_DIR)/keyboards/onspry/thypoono/readme.md
 	
 	# Create info.json in the root directory
 	@cp thypoono/qmk/qmk_firmware/info.json $(PR_DIR)/keyboards/onspry/thypoono/
