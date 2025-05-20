@@ -1,7 +1,7 @@
 {
-  "manufacturer": "onspry",
-  "keyboard_name": "thypoono",
-  "maintainer": "onspry",
+  "manufacturer": "Onspry",
+  "keyboard_name": "Zero",
+  "maintainer": "Onspry",
   "build": {
     "lto": true
   },
